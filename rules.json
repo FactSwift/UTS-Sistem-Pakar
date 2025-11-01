@@ -1,0 +1,141 @@
+{
+  "meta": {
+    "title": "Rice Crop Expert System (based on Kharisma et al. 2020)",
+    "source_reference": "Kharisma, Y. et al. (2020) Rice crop management expert system with forwarding chaining method and certainty factor. J. Phys.: Conf. Ser. 1524 012037"
+  },
+
+  "facts": {
+    "A1": {"question": "Leaves or edges of the leaves are brownish-gray?", "cf": 0.95},
+    "A2": {"question": "The leaves have brown spots shaped like a rhombus?", "cf": 0.85},
+    "A3": {"question": "The leaves have narrow, elongated brown spots?", "cf": 0.60},
+    "A4": {"question": "White patches or lines on the leaves (tubes/leaf rolls)?", "cf": 0.75},
+    "A5": {"question": "Leaves yellow to orange-yellow, visible green leafhoppers?", "cf": 0.70},
+    "A6": {"question": "Stem dries and brown planthopper seen at base?", "cf": 0.85},
+    "A7": {"question": "Shoots of rice stem dry and easily removed?", "cf": 0.95},
+    "A8": {"question": "Inside the plant stem, there are larvae/caterpillars?", "cf": 0.95},
+    "A9": {"question": "Stem yellow or brownish-red with black bed?", "cf": 0.95},
+    "A10": {"question": "Rice stalks collapse, rats sighted?", "cf": 0.75},
+    "A11": {"question": "Black spots in rice grains?", "cf": 0.85},
+    "A12": {"question": "Remaining rice seeds fall, birds in the field?", "cf": 0.85},
+
+    "B1": {"question": "Yellow leaves then dry?", "cf": 0.75},
+    "B2": {"question": "Shoots or leaf edges brownish-gray and spread?", "cf": 0.85},
+    "B3": {"question": "Shoots and leaf edges dry out and wither?", "cf": 0.65},
+    "B4": {"question": "Rice panicles rotten/broken in generative phase?", "cf": 0.85},
+    "B5": {"question": "Stems/midribs rotten, plants fall?", "cf": 0.45},
+    "B6": {"question": "Rice pan stalk broken/damaged?", "cf": 0.85},
+    "B7": {"question": "Few panicles and hollow grains?", "cf": 0.75},
+    "B8": {"question": "Rice grains not fully filled/empty?", "cf": 0.75},
+    "B9": {"question": "Rice pan stands upright but empty?", "cf": 0.95},
+    "B10": {"question": "Color/taste of rice grains changes unpleasantly?", "cf": 0.75},
+    "B11": {"question": "Plant wilting/dying early growth?", "cf": 0.70},
+    "B12": {"question": "Leaves yellow-orange?", "cf": 0.75},
+    "B13": {"question": "Dwarf plant growth?", "cf": 0.70},
+    "B14": {"question": "Plant growth inhibited?", "cf": 0.75},
+    "B15": {"question": "Young plants die and dry out?", "cf": 0.95},
+    "B16": {"question": "Excess use of nitrogen fertilizer?", "cf": 0.95},
+    "B17": {"question": "Footprints/rat holes around rice fields?", "cf": 0.85}
+  },
+
+  "rules": [
+    {
+      "id": "R1",
+      "if": ["A1", "B2", "A8", "B11", "B17"],
+      "then": "P01",
+      "cf": 0.70,
+      "note": "Bacterial leaf blight"
+    },
+    {
+      "id": "R2",
+      "if": ["A2", "A4", "A8", "B8", "B17"],
+      "then": "P02",
+      "cf": 0.80,
+      "note": "BLAS disease"
+    },
+    {
+      "id": "R3",
+      "if": ["A3", "A5", "A8", "B8", "B21"],
+      "then": "P03",
+      "cf": 0.70,
+      "note": "Narrow brown leaf spot"
+    },
+    {
+      "id": "R4",
+      "if": ["A5", "A8", "B12", "B14", "B15"],
+      "then": "P04",
+      "cf": 0.90,
+      "note": "Green leafhopper & tungro"
+    },
+    {
+      "id": "R5",
+      "if": ["A6", "B1", "A8", "B12"],
+      "then": "P05",
+      "cf": 0.90,
+      "note": "Brown planthopper"
+    },
+    {
+      "id": "R6",
+      "if": ["A7", "A8", "B9", "B16"],
+      "then": "P06",
+      "cf": 0.90,
+      "note": "Rice stem borer"
+    },
+    {
+      "id": "R7",
+      "if": ["A8", "B7", "B13", "B15", "B18"],
+      "then": "P07",
+      "cf": 0.70,
+      "note": "Black rice bug"
+    },
+    {
+      "id": "R8",
+      "if": ["A9", "B19", "B20"],
+      "then": "P08",
+      "cf": 0.80,
+      "note": "Rice field rat"
+    },
+    {
+      "id": "R9",
+      "if": ["A10", "B10"],
+      "then": "P09",
+      "cf": 0.80,
+      "note": "Stinky rice bug"
+    },
+
+    {
+      "id": "R10",
+      "if": ["P01"],
+      "then": "K01",
+      "cf": 0.60,
+      "note": "Sequential rule — complication from bacterial leaf blight"
+    },
+    {
+      "id": "R11",
+      "if": ["P05"],
+      "then": "K02",
+      "cf": 0.75,
+      "note": "Sequential rule — complication from brown planthopper"
+    },
+    {
+      "id": "R1b",
+      "if": ["A1", "A2"],
+      "then": "P01",
+      "cf": 0.60,
+      "note": "Parallel rule — partial symptom match for bacterial leaf blight"
+    }
+  ],
+
+  "labels": {
+    "P01": "Bacterial leaf blight (Xanthomonas oryzae)",
+    "P02": "BLAS disease (Pyricularia grisea)",
+    "P03": "Narrow brown leaf spot (Cercospora oryzae Miyake)",
+    "P04": "Green leafhopper and tungro (Rice tungro bacilliform virus)",
+    "P05": "Brown planthopper (Nilaparvata lugens)",
+    "P06": "Rice stem borer (Scirpophaga incertulas)",
+    "P07": "Black rice bug (Scotinophara coarctata)",
+    "P08": "Rice field rat (Rattus argentiventer)",
+    "P09": "Stinky rice bug (Leptocorisa acuta)",
+    "K01": "Yield loss due to bacterial leaf blight (complication)",
+    "K02": "Crop damage due to planthopper infestation"
+  }
+}
