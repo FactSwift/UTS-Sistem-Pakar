@@ -1,7 +1,8 @@
 {
   "meta": {
     "title": "Sistem Pakar Tanaman Padi",
-    },
+    "description": "Sistem pakar untuk mendiagnosa penyakit pada tanaman padi"
+  },
 
   "facts": {
     "A1": {"question": "Daun atau tepi daun berwarna abu-abu kecokelatan?", "cf": 0.95},
@@ -33,74 +34,24 @@
     "B14": {"question": "Pertumbuhan tanaman terhambat?", "cf": 0.75},
     "B15": {"question": "Tanaman muda mati dan mengering?", "cf": 0.95},
     "B16": {"question": "Pemakaian pupuk nitrogen berlebihan?", "cf": 0.95},
-    "B17": {"question": "Ada jejak kaki/lubang tikus di sekitar sawah?", "cf": 0.85}
+    "B17": {"question": "Ada jejak kaki/lubang tikus di sekitar sawah?", "cf": 0.85},
+    "B18": {"question": "Terdapat serangga kecil berwarna hitam di daun atau batang?", "cf": 0.70},
+    "B19": {"question": "Ada batang yang patah atau lubang di sekitar pangkal?", "cf": 0.75},
+    "B20": {"question": "Terdapat sisa tanaman rusak akibat hewan?", "cf": 0.80},
+    "B21": {"question": "Bercak terlihat menyebar cepat ke daun sekitar?", "cf": 0.75}
   },
 
- "rules": [
-  {
-    "id": "R1",
-    "if": ["A1", "B2", "B8", "B11", "B17"],
-    "then": "P01",
-    "cf": 0.70,
-    "note": "Hawar daun bakteri (Bacterial leaf blight)"
-  },
-  {
-    "id": "R2",
-    "if": ["A2", "B4", "B8", "B17"],
-    "then": "P02",
-    "cf": 0.80,
-    "note": "Penyakit BLAS (BLAS disease)"
-  },
-  {
-    "id": "R3",
-    "if": ["A3", "B5", "B8", "B21"],
-    "then": "P03",
-    "cf": 0.70,
-    "note": "Bercak cokelat sempit (Narrow brown leaf spot)"
-  },
-  {
-    "id": "R4",
-    "if": ["A5", "B8", "B12", "B14", "B15"],
-    "then": "P04",
-    "cf": 0.90,
-    "note": "Wereng hijau & tungro (Green leafhopper and tungro virus)"
-  },
-  {
-    "id": "R5",
-    "if": ["A6", "B1", "B8", "B12"],
-    "then": "P05",
-    "cf": 0.90,
-    "note": "Wereng cokelat (Brown planthopper)"
-  },
-  {
-    "id": "R6",
-    "if": ["A7", "B8", "B9", "B16"],
-    "then": "P06",
-    "cf": 0.90,
-    "note": "Penggerek batang padi (Rice stem borer)"
-  },
-  {
-    "id": "R7",
-    "if": ["A8", "B7", "B13", "B15", "B18"],
-    "then": "P07",
-    "cf": 0.70,
-    "note": "Kepik hitam padi (Black rice bug)"
-  },
-  {
-    "id": "R8",
-    "if": ["A9", "B19", "B20"],
-    "then": "P08",
-    "cf": 0.80,
-    "note": "Tikus sawah (Rice field rat)"
-  },
-  {
-    "id": "R9",
-    "if": ["A10", "B10"],
-    "then": "P09",
-    "cf": 0.80,
-    "note": "Kepik busuk padi (Stinky rice bug)"
-  }
-],
+  "rules": [
+    {"id": "R1", "if": ["A1", "B2", "B8", "B11", "B17"], "then": "P01", "cf": 0.70, "note": "Hawar daun bakteri (Bacterial leaf blight)"},
+    {"id": "R2", "if": ["A2", "B4", "B8", "B17"], "then": "P02", "cf": 0.80, "note": "Penyakit BLAS (BLAST disease)"},
+    {"id": "R3", "if": ["A3", "B5", "B8", "B21"], "then": "P03", "cf": 0.70, "note": "Bercak cokelat sempit (Narrow brown leaf spot)"},
+    {"id": "R4", "if": ["A5", "B8", "B12", "B14", "B15"], "then": "P04", "cf": 0.90, "note": "Wereng hijau & tungro (Green leafhopper and tungro virus)"},
+    {"id": "R5", "if": ["A6", "B1", "B8", "B12"], "then": "P05", "cf": 0.90, "note": "Wereng cokelat (Brown planthopper)"},
+    {"id": "R6", "if": ["A7", "B8", "B9", "B16"], "then": "P06", "cf": 0.90, "note": "Penggerek batang padi (Rice stem borer)"},
+    {"id": "R7", "if": ["A8", "B7", "B13", "B15", "B18"], "then": "P07", "cf": 0.70, "note": "Kepik hitam padi (Black rice bug)"},
+    {"id": "R8", "if": ["A9", "B19", "B20"], "then": "P08", "cf": 0.80, "note": "Tikus sawah (Rice field rat)"},
+    {"id": "R9", "if": ["A10", "B10"], "then": "P09", "cf": 0.80, "note": "Kepik busuk padi (Stinky rice bug)"}
+  ],
 
   "labels": {
     "P01": "Hawar daun bakteri (Xanthomonas oryzae)",
