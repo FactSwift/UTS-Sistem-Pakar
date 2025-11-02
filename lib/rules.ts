@@ -1,0 +1,72 @@
+// lib/rules.ts - Rules data as TypeScript module
+import { RulesData } from './inference-engine';
+
+export const rulesData: RulesData = {
+  "meta": {
+    "title": "Sistem Pakar Tanaman Padi",
+    "description": "Sistem pakar untuk mendiagnosa penyakit pada tanaman padi"
+  },
+
+  "facts": {
+    "A1": {"question": "Daun atau tepi daun berwarna abu-abu kecokelatan?", "cf": 0.95},
+    "A2": {"question": "Daun memiliki bercak cokelat berbentuk belah ketupat?", "cf": 0.85},
+    "A3": {"question": "Daun memiliki bercak cokelat sempit dan memanjang?", "cf": 0.60},
+    "A4": {"question": "Ada bercak putih atau garis pada daun (seperti tabung/gulung daun)?", "cf": 0.75},
+    "A5": {"question": "Daun berwarna kuning hingga oranye kekuningan, terlihat wereng hijau?", "cf": 0.70},
+    "A6": {"question": "Batang mengering dan terlihat wereng cokelat di pangkalnya?", "cf": 0.85},
+    "A7": {"question": "Pucuk batang padi mengering dan mudah dicabut?", "cf": 0.95},
+    "A8": {"question": "Di dalam batang tanaman terdapat larva/ulat?", "cf": 0.95},
+    "A9": {"question": "Batang berwarna kuning atau merah kecokelatan dengan dasar hitam?", "cf": 0.95},
+    "A10": {"question": "Batang padi roboh, terlihat tikus di area sawah?", "cf": 0.75},
+    "A11": {"question": "Ada bintik hitam pada bulir padi?", "cf": 0.85},
+    "A12": {"question": "Sisa bulir padi berjatuhan, terlihat burung di sawah?", "cf": 0.85},
+
+    "B1": {"question": "Daun menguning lalu mengering?", "cf": 0.75},
+    "B2": {"question": "Pucuk atau tepi daun berwarna abu-abu kecokelatan dan menyebar?", "cf": 0.85},
+    "B3": {"question": "Pucuk dan tepi daun mengering serta layu?", "cf": 0.65},
+    "B4": {"question": "Malai padi busuk/patah pada fase generatif?", "cf": 0.85},
+    "B5": {"question": "Batang/tulang daun membusuk, tanaman rebah?", "cf": 0.45},
+    "B6": {"question": "Tangkai malai padi patah/rusak?", "cf": 0.85},
+    "B7": {"question": "Jumlah malai sedikit dan gabah hampa?", "cf": 0.75},
+    "B8": {"question": "Bulir padi tidak terisi penuh/kosong?", "cf": 0.75},
+    "B9": {"question": "Malai padi tegak tetapi kosong?", "cf": 0.95},
+    "B10": {"question": "Warna/rasa bulir padi berubah tidak sedap?", "cf": 0.75},
+    "B11": {"question": "Tanaman layu/mati pada fase awal pertumbuhan?", "cf": 0.70},
+    "B12": {"question": "Daun berwarna kuning-oranye?", "cf": 0.75},
+    "B13": {"question": "Pertumbuhan tanaman kerdil?", "cf": 0.70},
+    "B14": {"question": "Pertumbuhan tanaman terhambat?", "cf": 0.75},
+    "B15": {"question": "Tanaman muda mati dan mengering?", "cf": 0.95},
+    "B16": {"question": "Pemakaian pupuk nitrogen berlebihan?", "cf": 0.95},
+    "B17": {"question": "Ada jejak kaki/lubang tikus di sekitar sawah?", "cf": 0.85},
+    "B18": {"question": "Terdapat serangga kecil berwarna hitam di daun atau batang?", "cf": 0.70},
+    "B19": {"question": "Ada batang yang patah atau lubang di sekitar pangkal?", "cf": 0.75},
+    "B20": {"question": "Terdapat sisa tanaman rusak akibat hewan?", "cf": 0.80},
+    "B21": {"question": "Bercak terlihat menyebar cepat ke daun sekitar?", "cf": 0.75}
+  },
+
+  "rules": [
+    {"id": "R1", "if": ["A1", "B2", "B8", "B11", "B17"], "then": "P01", "cf": 0.70, "note": "Hawar daun bakteri (Bacterial leaf blight)"},
+    {"id": "R2", "if": ["A2", "B4", "B8", "B17"], "then": "P02", "cf": 0.80, "note": "Penyakit BLAS (BLAST disease)"},
+    {"id": "R3", "if": ["A3", "B5", "B8", "B21"], "then": "P03", "cf": 0.70, "note": "Bercak cokelat sempit (Narrow brown leaf spot)"},
+    {"id": "R4", "if": ["A5", "B8", "B12", "B14", "B15"], "then": "P04", "cf": 0.90, "note": "Wereng hijau & tungro (Green leafhopper and tungro virus)"},
+    {"id": "R5", "if": ["A6", "B1", "B8", "B12"], "then": "P05", "cf": 0.90, "note": "Wereng cokelat (Brown planthopper)"},
+    {"id": "R6", "if": ["A7", "B8", "B9", "B16"], "then": "P06", "cf": 0.90, "note": "Penggerek batang padi (Rice stem borer)"},
+    {"id": "R7", "if": ["A8", "B7", "B13", "B15", "B18"], "then": "P07", "cf": 0.70, "note": "Kepik hitam padi (Black rice bug)"},
+    {"id": "R8", "if": ["A9", "B19", "B20"], "then": "P08", "cf": 0.80, "note": "Tikus sawah (Rice field rat)"},
+    {"id": "R9", "if": ["A10", "B10"], "then": "P09", "cf": 0.80, "note": "Kepik busuk padi (Stinky rice bug)"}
+  ],
+
+  "labels": {
+    "P01": "Hawar daun bakteri (Xanthomonas oryzae)",
+    "P02": "Penyakit BLAS (Pyricularia grisea)",
+    "P03": "Bercak cokelat sempit (Cercospora oryzae Miyake)",
+    "P04": "Wereng hijau dan tungro (Rice tungro bacilliform virus)",
+    "P05": "Wereng cokelat (Nilaparvata lugens)",
+    "P06": "Penggerek batang padi (Scirpophaga incertulas)",
+    "P07": "Kepik hitam padi (Scotinophara coarctata)",
+    "P08": "Tikus sawah (Rattus argentiventer)",
+    "P09": "Kepik busuk padi (Leptocorisa acuta)",
+    "K01": "Kehilangan hasil akibat hawar daun bakteri (komplikasi)",
+    "K02": "Kerusakan tanaman akibat serangan wereng cokelat"
+  }
+};

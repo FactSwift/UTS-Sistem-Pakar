@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem Pakar Penyakit Padi</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="module">
+    import { runExpertSystem } from "../inference_engine/inference_engine.js";
+    
+    // state
+    let questions = [];
+    let userAnswers = {};
+    let currentPage = 1;
+    const pageSize = 6; // jumlah pertanyaan per sesi/halaman
+
+    async function loadRulesForUI() {
+      // Resolve path relative to this module
+      const url = new URL("../rules.json", import.meta.url);
+      // Try fetch first
+      try {
+        const response = await fetch(url.href, { cache: 'no-store' });
+        if (response && response.ok) {
+          const data = await response.json();
+          console.log('Rules loaded via fetch:', data);
+          return data;
+        }
+      } catch (fetchErr) {
+        console.warn('Fetch rules failed, trying dynamic import...', fetchErr);
+      }
+
+      // Fallback: dynamic import JSON (works in modern browsers/bundlers)
+      try {
+        const mod = await import(url.href + (url.search ? '' : `?t=${Date.now()}`), { assert: { type: 'json' } });
+        const data = mod.default || mod;
+        console.log('Rules loaded via dynamic import:', data);
+        return data;
+      } catch (importErr) {
+        console.error('Dynamic import of rules failed:', importErr);
+        throw importErr;
+      }
+    }
+
+    // Initialize the app
+    async function init() {
+      try {
+        console.log('Loading rules...');
+        const rules = await loadRulesForUI();
+        // Initialize your app with the loaded rules here
+        console.log('App initialized with rules');
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+        // Update UI to show error to the user
+        document.getElementById('questionForm').innerHTML = `
+          <div class="error">
+            Gagal memuat data. Pastikan file dibuka melalui server lokal (Live Server).
+          </div>`;
+      }
+    }
+
+    // Start the app when the page loads
+    document.addEventListener('DOMContentLoaded', init);
+
+    async function loadQuestions() {
+      const form = document.getElementById('questionForm');
+      form.innerHTML = '<div class="loading">Memuat pertanyaan...</div>';
+      try {
+        const data = await loadRulesForUI();
+        // build questions from facts entries (order preserved as insertion order in JSON)
+        questions = Object.entries(data.facts).map(([key, fact]) => ({
+          id: key,
+          question: fact.question,
+          cf: fact.cf
+        }));
+        // initialize all answers to Ragu (0.5 * cf) so inference dapat berjalan meski sesi belum dibuka
+        userAnswers = {};
+        for (const q of questions) {
+          userAnswers[q.id] = parseFloat(q.cf) * 0.5;
+        }
+        renderQuestionForm();
+      } catch (error) {
+        console.error('Error loading questions:', error);
+        form.innerHTML = `
+          <div class="error">
+          Gagal memuat pertanyaan dari rules.json. Detail: ${String(error.message || error)}
+          </div>`;
+      }
+    }
+
+    function renderQuestionForm() {
+      const form = document.getElementById('questionForm');
+      form.innerHTML = '';
+
+      // hitung paging
+      const total = questions.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+      const start = (currentPage - 1) * pageSize;
+      const end = Math.min(start + pageSize, total);
+
+      // session progress pills
+      const pills = document.createElement('div');
+      pills.className = 'session-progress';
+      const pillsInner = [];
+      for (let p = 1; p <= totalPages; p++) {
+        const filledCount = countFilledForPage(p);
+        const totalInPage = pageSizeFor(p);
+        const cls = p === currentPage ? 'pill active' : (filledCount > 0 ? 'pill done' : 'pill');
+        pillsInner.push(`<button type="button" class="${cls}" onclick="jumpToPage(${p})" aria-label="Buka sesi ${p}">${p}</button>`);
+      }
+      pills.innerHTML = `
+        <div class="session-progress-title">Progress Sesi</div>
+        <div class="session-pills">${pillsInner.join('')}</div>
+      `;
+      form.appendChild(pills);
+
+      // toolbar actions
+      const toolbar = document.createElement('div');
+      toolbar.className = 'toolbar-row';
+      const filledOnThis = countFilledForPage(currentPage);
+      toolbar.innerHTML = `
+        <div class="toolbar-left">Sesi ${currentPage} · <span class="muted">${filledOnThis} gejala terisi</span></div>
+        <div class="toolbar-right">
+          <button type="button" class="chip-btn" onclick="setAllYes()">Iya Semua</button>
+          <button type="button" class="chip-btn" onclick="setAllRagu()">Semua Ragu</button>
+          <button type="button" class="chip-btn" onclick="bersihkanSesi()">Bersihkan</button>
+        </div>`;
+      form.appendChild(toolbar);
+
+      const grid = document.createElement('div');
+      grid.className = 'question-grid';
+
+      questions.slice(start, end).forEach((q, idx) => {
+        const index = start + idx; // nomor absolut
+        const card = document.createElement('div');
+        card.className = 'question-card';
+        card.setAttribute('data-id', q.id);
+
+        card.innerHTML = `
+          <div class="card-head">
+          <h4 class="card-title"><span class="question-number">${index + 1}.</span> ${q.question}</h4>
+          <span class="status-chip" id="chip-${q.id}">Ragu</span>
+          </div>
+          <div class="yn-slider">
+            <input id="slider-${q.id}" type="range" min="0" max="1" step="0.5" value="0.5" aria-label="Jawaban Tidak/Ragu/Ya" oninput="onYNChange('${q.id}', this.value)">
+            <div class="slider-labels">
+              <span>Tidak</span>
+              <span>Ragu</span>
+              <span>Ya</span>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      form.appendChild(grid);
+
+      // pagination controls
+      const nav = document.createElement('div');
+      nav.className = 'pager';
+      nav.innerHTML = `
+        <div class="pager-info">Sesi ${currentPage} dari ${Math.max(1, Math.ceil(questions.length / pageSize))}</div>
+        <div class="pager-buttons">
+          <button type="button" class="pager-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="prevPage()">Sesi Sebelumnya</button>
+          ${currentPage < Math.ceil(questions.length / pageSize)
+            ? `<button type=\"button\" class=\"pager-btn primary\" onclick=\"nextPage()\">Lanjut ke Sesi Berikutnya</button>`
+            : `<button type=\"button\" class=\"submit-btn\" onclick=\"processDiagnosis()\">Proses Diagnosa</button>`}
+        </div>
+      `;
+      form.appendChild(nav);
+
+      // set initial slider/chip states from saved answers (default Ragu)
+      for (let i = start; i < end; i++) {
+        const q = questions[i];
+        let saved = userAnswers[q.id];
+        if (saved === undefined) {
+          // default ragu = 0.5 * cf
+          saved = parseFloat(q.cf) * 0.5;
+          userAnswers[q.id] = saved;
+        }
+        const slider = document.getElementById(`slider-${q.id}`);
+        const chip = document.getElementById(`chip-${q.id}`);
+        let sliderVal = 0.5;
+        let state = 'maybe';
+        if (saved <= 0) { sliderVal = 0; state = 'no'; }
+        else if (Math.abs(saved - parseFloat(q.cf)) < 1e-9) { sliderVal = 1; state = 'yes'; }
+        if (slider) slider.value = sliderVal;
+        if (chip) {
+          chip.textContent = state === 'yes' ? 'Ya' : (state === 'no' ? 'Tidak' : 'Ragu');
+          chip.classList.remove('yes','no','maybe');
+          chip.classList.add(state);
+        }
+      }
+    }
+
+    // Handle slider change to set Tidak/Ragu/Ya
+    window.onYNChange = function(questionId, val) {
+      const q = questions.find(x => x.id === questionId);
+      const f = parseFloat(q.cf);
+      let state = 'maybe';
+      let answerCF = f * 0.5; // default ragu
+      if (String(val) === '1') { state = 'yes'; answerCF = f; }
+      else if (String(val) === '0') { state = 'no'; answerCF = 0; }
+      userAnswers[questionId] = answerCF;
+
+      // update chip text and style
+      const chip = document.getElementById(`chip-${questionId}`);
+      if (chip) {
+        chip.textContent = state === 'yes' ? 'Ya' : (state === 'no' ? 'Tidak' : 'Ragu');
+        chip.classList.remove('yes','no','maybe');
+        chip.classList.add(state);
+      }
+    };
+
+    // paging actions
+    window.nextPage = function() {
+      const totalPages = Math.max(1, Math.ceil(questions.length / pageSize));
+      if (currentPage < totalPages) {
+        currentPage += 1;
+        renderQuestionForm();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+    window.prevPage = function() {
+      if (currentPage > 1) {
+        currentPage -= 1;
+        renderQuestionForm();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+
+    // Jump to page via session pill
+    window.jumpToPage = function(p) {
+      const totalPages = Math.max(1, Math.ceil(questions.length / pageSize));
+      if (p >= 1 && p <= totalPages) {
+        currentPage = p;
+        renderQuestionForm();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+
+    // Helpers: count filled (non-ragu) per page and page size for last page
+    function pageBounds(page) {
+      const total = questions.length;
+      const start = (page - 1) * pageSize;
+      const end = Math.min(start + pageSize, total);
+      return { start, end };
+    }
+    function pageSizeFor(page) {
+      const b = pageBounds(page);
+      return b.end - b.start;
+    }
+    function countFilledForPage(page) {
+      const { start, end } = pageBounds(page);
+      let c = 0;
+      for (let i = start; i < end; i++) {
+        const q = questions[i];
+        const v = userAnswers[q.id];
+        if (v === 0 || Math.abs(v - parseFloat(q.cf)) < 1e-9) c++;
+      }
+      return c;
+    }
+
+    // Toolbar actions
+    window.setAllRagu = function() {
+      const { start, end } = pageBounds(currentPage);
+      for (let i = start; i < end; i++) {
+        const q = questions[i];
+        const slider = document.getElementById(`slider-${q.id}`);
+        const chip = document.getElementById(`chip-${q.id}`);
+        userAnswers[q.id] = parseFloat(q.cf) * 0.5;
+        if (slider) slider.value = 0.5;
+        if (chip) { chip.textContent = 'Ragu'; chip.classList.remove('yes','no'); chip.classList.add('maybe'); }
+      }
+      renderQuestionForm();
+    };
+    window.bersihkanSesi = function() {
+      const { start, end } = pageBounds(currentPage);
+      for (let i = start; i < end; i++) {
+        const q = questions[i];
+        const slider = document.getElementById(`slider-${q.id}`);
+        const chip = document.getElementById(`chip-${q.id}`);
+        userAnswers[q.id] = 0;
+        if (slider) slider.value = 0;
+        if (chip) { chip.textContent = 'Tidak'; chip.classList.remove('yes','maybe'); chip.classList.add('no'); }
+      }
+      renderQuestionForm();
+    };
+
+    window.setAllYes = function() {
+      const { start, end } = pageBounds(currentPage);
+      for (let i = start; i < end; i++) {
+        const q = questions[i];
+        const slider = document.getElementById(`slider-${q.id}`);
+        const chip = document.getElementById(`chip-${q.id}`);
+        userAnswers[q.id] = parseFloat(q.cf);
+        if (slider) slider.value = 1;
+        if (chip) { chip.textContent = 'Ya'; chip.classList.remove('no','maybe'); chip.classList.add('yes'); }
+      }
+      renderQuestionForm();
+    };
+
+    async function processDiagnosis() {
+      // dengan default 'Ragu', semua pertanyaan dianggap telah memiliki nilai
+      if (window._diagnosing) return; // guard double-click
+      window._diagnosing = true;
+
+      const output = document.getElementById('hasil');
+      output.innerHTML = '<div class="loading">Memproses diagnosa...</div>';
+
+      // safety timeout agar tidak "nge-stack"
+      const withTimeout = (p, ms) => Promise.race([
+        p,
+        new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout memproses > ' + ms + 'ms')), ms))
+      ]);
+
+      try {
+        const results = await withTimeout(runExpertSystem(userAnswers), 8000);
+        if (!Array.isArray(results)) {
+          throw new Error('Hasil tidak valid');
+        }
+        showResults(results);
+      } catch (error) {
+        console.error('Error in diagnosis:', error);
+        output.innerHTML = `
+          <div class="result error">
+            <strong>Terjadi Kesalahan</strong>
+            <em>${(error && error.message) ? error.message : 'Maaf, terjadi kesalahan saat memproses diagnosis.'}</em>
+          </div>`;
+      } finally {
+        window._diagnosing = false;
+      }
+    }
+
+    // Expose for inline onclick in module context (must be outside other functions)
+    window.processDiagnosis = processDiagnosis;
+
+    function showResults(results) {
+      const output = document.getElementById('hasil');
+      output.innerHTML = '';
+
+      if (!results || results.length === 0) {
+        output.innerHTML = `
+          <div class="result">
+            <strong>Tidak ada penyakit terdeteksi</strong>
+            <em>Berdasarkan gejala yang dipilih, tidak ditemukan penyakit yang sesuai.</em>
+          </div>`;
+        return;
+      }
+
+      // display top 3
+      const top = results.slice(0, 3);
+      output.innerHTML = `
+        <h2>Hasil Diagnosa</h2>
+        <div class="results-container">
+          ${top.map((r, idx) => {
+            const cfPct = (parseFloat(r.cf) * 100).toFixed(1);
+            return `
+              <div class="result">
+                <div class="result-header">
+                  <span class="result-rank">${idx + 1}</span>
+                  <h3>${r.penyakit}</h3>
+                  <span class="confidence-badge">${cfPct}%</span>
+                </div>
+                <div class="result-body">
+                  <p>${r.note || ''}</p>
+                  <div class="confidence-meter">
+                    <div class="confidence-fill" style="width: ${cfPct}%;"></div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <button onclick="resetDiagnosis()" class="reset-btn">Lakukan Diagnosa Kembali</button>
+      `;
+
+      output.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    window.resetDiagnosis = function() {
+      userAnswers = {};
+      document.querySelectorAll('.yn-slider input[type="range"]').forEach(r => {
+        r.value = 0;
+      });
+      document.querySelectorAll('.status-chip').forEach(chip => {
+        chip.textContent = 'Belum dijawab';
+        chip.classList.remove('yes','no');
+      });
+      document.getElementById('hasil').innerHTML = '';
+      currentPage = 1;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    document.addEventListener('DOMContentLoaded', loadQuestions);
+  </script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Sistem Pakar Penyakit Padi</h1>
+      <p>Pilih gejala yang sesuai dengan kondisi tanaman padi Anda</p>
+    </header>
+
+    <form id="questionForm" class="question-form">
+      <!-- Questions injected here -->
+    </form>
+
+    <div id="hasil"></div>
+  </div>
+</body>
+</html>
