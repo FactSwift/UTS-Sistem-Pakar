@@ -2,6 +2,10 @@
 
 Sistem pakar berbasis web untuk mendiagnosa penyakit pada tanaman padi menggunakan metode forward chaining dan certainty factor.
 
+## App
+
+https://uts-sistem-pakar.vercel.app/
+
 ## Fitur
 
 - **Inference Engine** dengan forward chaining dan certainty factor (MYCIN-like)
